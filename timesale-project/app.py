@@ -36,7 +36,7 @@ orders = []
 ADMIN_ID = "admin"
 ADMIN_PW = "1234"
 
-# ==================== 1. 메인 홈 화면 ====================
+# ==================== 1. 메인 홈 화면 (카드 닫기 태그 수정 완료) ====================
 INDEX_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -101,6 +101,7 @@ INDEX_TEMPLATE = """
                     badge = `<span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-lg text-xs font-semibold">🟢 구매 가능 (잔여: ${p.stock}개)</span>`;
                 }
 
+                # 바깥쪽 카드 닫기 태그(</div>) 추가 완료
                 html += `<div class="p-4 bg-white border border-gray-100 rounded-xl shadow-2xs flex justify-between items-center hover:border-indigo-200 transition">
                     <div>
                         <h3 class="font-bold text-gray-900 text-base">${p.name}</h3>
@@ -111,7 +112,7 @@ INDEX_TEMPLATE = """
                         ${badge}
                         <a href="/product/${p.id}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700 transition shadow-xs">상세보기 & 구매 →</a>
                     </div>
-                `;
+                </div>`;
             }
             document.getElementById('product-grid').innerHTML = html || '<p class="text-gray-400 text-xs text-center py-4">등록된 상품이 없습니다.</p>';
         }
@@ -584,21 +585,16 @@ def purchase():
 
   product = products[p_id]
 
-  # 백엔드 시간 검증 오류 방지: 타임스탬프 밀리초 단위로 안전하게 비교
   try:
-    # 윈도우/리눅스 환경 차이를 없애기 위해 'Z'나 공백 정리 후 파싱
     clean_time_str = product["open_time"].replace("Z", "")
     open_dt = datetime.fromisoformat(clean_time_str)
     now_dt = datetime.now()
 
-    # 테스트 시 오픈 시간이 헷갈릴 경우를 대비해 5초 미세 오차는 허용하거나,
-    # 만약 시간이 지났다면 정상 통과되도록 비교
     if now_dt.timestamp() < open_dt.timestamp():
       return jsonify(
           {"error": "아직 해당 상품의 타임딜 오픈 시간이 되지 않았습니다."}
       ), 400
-  except Exception as e:
-    # 파싱 예외 발생 시 테스트 원활함을 위해 에러로 차단하지 않고 통과 (안전장치)
+  except Exception:
     pass
 
   name_pattern = r"^[가-힣]{2,}$"
