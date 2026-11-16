@@ -8,6 +8,7 @@ from flask import (
     session,
     url_for,
 )
+import random
 import re
 
 app = Flask(__name__)
@@ -35,7 +36,7 @@ orders = []
 ADMIN_ID = "admin"
 ADMIN_PW = "1234"
 
-# ==================== 1. 사용자용 메인 페이지 ====================
+# ==================== 1. 사용자용 메인 페이지 (주소 입력 및 주문번호 안내 추가) ====================
 USER_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -49,7 +50,7 @@ USER_TEMPLATE = """
         
         <div class="text-center mb-6">
             <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">⚡ LIMITED TIME SALE</h1>
-            <p class="text-gray-500 text-sm mt-1">상품별 오픈 시간이 다른 한정판 선착순 구매 서비스</p>
+            <p class="text-gray-500 text-sm mt-1">한정판 선착순 굿즈 구매 및 배송지 사전 등록 서비스</p>
         </div>
 
         <!-- 기능 1: 상품 및 잔여 재고 조회 -->
@@ -61,7 +62,7 @@ USER_TEMPLATE = """
             <div id="product-list" class="space-y-3"></div>
         </div>
 
-        <!-- 기능 2: 선착순 굿즈 구매 신청 -->
+        <!-- 기능 2: 선착순 굿즈 구매 신청 (주소 입력 포함) -->
         <div class="mb-6 p-5 border border-gray-100 rounded-xl bg-gray-50/50">
             <h2 class="text-base font-bold text-gray-800 mb-3">📌 2. 선착순 굿즈 구매 신청</h2>
             <form onsubmit="submitPurchase(event)" class="space-y-3">
@@ -78,6 +79,10 @@ USER_TEMPLATE = """
                         <label class="block text-xs font-semibold text-gray-600 mb-1">연락처 (- 없이 숫자만)</label>
                         <input type="text" id="buyer-phone" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="01012345678">
                     </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">배송지 주소</label>
+                    <input type="text" id="buyer-address" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="도로명 주소 또는 상세 주소 입력">
                 </div>
                 <button type="submit" id="purchase-btn" class="w-full bg-indigo-600 text-white font-semibold p-2.5 rounded-lg hover:bg-indigo-700 transition text-sm shadow-sm">⚡ 빠르게 구매 신청하기</button>
             </form>
@@ -105,6 +110,9 @@ USER_TEMPLATE = """
         let globalProducts = {};
 
         async function loadProducts() {
+            const selectEl = document.getElementById('purchase-product-id');
+            const currentSelected = selectEl ? selectEl.value : '';
+
             const res = await fetch('/api/products');
             globalProducts = await res.json();
             
@@ -149,7 +157,11 @@ USER_TEMPLATE = """
             }
 
             document.getElementById('product-list').innerHTML = html || '<p class="text-gray-400 text-xs text-center py-4">등록된 상품이 없습니다.</p>';
-            document.getElementById('purchase-product-id').innerHTML = selectHtml || '<option value="">구매 가능한 상품이 없습니다</option>';
+            selectEl.innerHTML = selectHtml || '<option value="">구매 가능한 상품이 없습니다</option>';
+            
+            if (currentSelected) {
+                selectEl.value = currentSelected;
+            }
             checkSelectedProduct();
         }
 
@@ -172,6 +184,7 @@ USER_TEMPLATE = """
             const productId = document.getElementById('purchase-product-id').value;
             const name = document.getElementById('buyer-name').value.trim();
             const phone = document.getElementById('buyer-phone').value.trim();
+            const address = document.getElementById('buyer-address').value.trim();
 
             const nameRegex = /^[가-힣]{2,}$/;
             const phoneRegex = /^010\d{7,8}$/;
@@ -189,16 +202,26 @@ USER_TEMPLATE = """
                 return;
             }
 
+            if (!address) {
+                resultDiv.className = "mt-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-semibold";
+                resultDiv.innerText = "❌ 입력 오류: 배송지 주소를 입력해주세요.";
+                return;
+            }
+
             const res = await fetch('/api/purchase', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({product_id: parseInt(productId), name, phone})
+                body: JSON.stringify({product_id: parseInt(productId), name, phone, address})
             });
             const result = await res.json();
             
             if (res.ok) {
-                resultDiv.className = "mt-3 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-xs font-semibold";
-                resultDiv.innerHTML = `🎉 [주문 성공 #${result.order.order_id}] ${result.message}`;
+                resultDiv.className = "mt-3 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl text-xs font-semibold space-y-1";
+                resultDiv.innerHTML = `
+                    <div class="font-bold text-sm text-green-900">🎉 선착순 구매 성공!</div>
+                    <div>주문 번호: <span class="font-mono bg-white px-2 py-0.5 rounded border border-green-200 text-indigo-600">${result.order.order_code}</span></div>
+                    <div>${result.message}</div>
+                `;
                 loadProducts();
             } else {
                 resultDiv.className = "mt-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-semibold";
@@ -207,7 +230,7 @@ USER_TEMPLATE = """
         }
 
         async function searchOrders() {
-            const name = document.getElementById('search-name').value;
+            const name = document.getElementById('search-name').value.trim();
             const res = await fetch(`/api/orders?name=${encodeURIComponent(name)}`);
             const data = await res.json();
             let resultDiv = document.getElementById('order-result');
@@ -217,12 +240,14 @@ USER_TEMPLATE = """
             }
             let html = '';
             data.forEach(o => {
-                html += `<div class="p-3 bg-white border border-gray-100 rounded-lg text-xs flex justify-between items-center shadow-2xs">
-                    <div>
-                        <span class="font-bold text-indigo-600">주문 #${o.order_id}</span> | <span class="text-gray-800">${o.product_name}</span>
-                        <div class="text-gray-400 mt-0.5">${o.name} (${o.phone})</div>
+                html += `<div class="p-3.5 bg-white border border-gray-100 rounded-xl text-xs shadow-2xs space-y-1">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold font-mono text-indigo-600">${o.order_code}</span>
+                        <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-semibold">${o.status}</span>
                     </div>
-                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded font-semibold">${o.status}</span>
+                    <div class="font-bold text-gray-800">${o.product_name}</div>
+                    <div class="text-gray-500">수령인: ${o.name} (${o.phone})</div>
+                    <div class="text-gray-400 truncate">배송지: ${o.address}</div>
                 </div>`;
             });
             resultDiv.innerHTML = html;
@@ -272,7 +297,7 @@ LOGIN_TEMPLATE = """
 </html>
 """
 
-# ==================== 3. 관리자 대시보드 페이지 (삭제 버튼 추가) ====================
+# ==================== 3. 관리자 대시보드 페이지 ====================
 ADMIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -306,7 +331,7 @@ ADMIN_TEMPLATE = """
         <!-- 상품 등록/수정 섹션 -->
         <div class="mb-8 p-6 bg-indigo-50/50 border border-indigo-100 rounded-2xl shadow-2xs">
             <h2 class="text-base font-bold text-indigo-900 mb-3 flex items-center">
-                <span class="mr-2">📦</span> 타임딜 상품 등록 및 수정
+                <span class="mr-2">📦</span> 타임딜 상품 등록 및 수정 (개별 오픈 시간 지정)
             </h2>
             <form id="product-form" onsubmit="saveProduct(event)" class="space-y-3">
                 <input type="hidden" id="p-id" value="">
@@ -380,13 +405,14 @@ ADMIN_TEMPLATE = """
                 ordHtml = '<p class="text-gray-400 text-xs py-4 text-center">접수된 주문이 없습니다.</p>';
             } else {
                 orders.forEach(o => {
-                    ordHtml += `<div class="p-3 bg-white border border-gray-100 rounded-xl text-xs shadow-2xs">
+                    ordHtml += `<div class="p-3 bg-white border border-gray-100 rounded-xl text-xs shadow-2xs space-y-1">
                         <div class="flex justify-between items-center">
-                            <span class="font-bold text-indigo-600">주문 #${o.order_id}</span>
+                            <span class="font-bold font-mono text-indigo-600">${o.order_code}</span>
                             <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded font-semibold">${o.status}</span>
                         </div>
-                        <div class="text-gray-800 font-medium mt-1">${o.product_name}</div>
-                        <div class="text-gray-400 mt-0.5">구매자: ${o.name} (${o.phone})</div>
+                        <div class="text-gray-800 font-medium">${o.product_name}</div>
+                        <div class="text-gray-500">수령인: ${o.name} (${o.phone})</div>
+                        <div class="text-gray-400 truncate">배송지: ${o.address}</div>
                     </div>`;
                 });
             }
@@ -475,6 +501,7 @@ def purchase():
   p_id = data.get("product_id")
   name = data.get("name", "").strip()
   phone = data.get("phone", "").strip()
+  address = data.get("address", "").strip()
 
   if p_id not in products:
     return jsonify({"error": "존재하지 않는 상품입니다."}), 400
@@ -503,17 +530,28 @@ def purchase():
         {"error": "올바른 연락처 형식이 아닙니다. (예: 01012345678)"}
     ), 400
 
+  if not address:
+    return jsonify({"error": "배송지 주소를 입력해주세요."}), 400
+
   if product["stock"] <= 0:
     return jsonify({"error": "재고가 모두 소진되었습니다. (품절)"}), 400
 
   product["stock"] -= 1
+
+  # 고유 주문 번호 생성 (예: ORD-20261116-A1B2)
+  date_str = datetime.now().strftime("%Y%m%d")
+  rand_str = "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ0123456789", k=4))
+  order_code = f"ORD-{date_str}-{rand_str}"
+
   order_id = len(orders) + 1
   new_order = {
       "order_id": order_id,
+      "order_code": order_code,
       "product_name": product["name"],
       "name": name,
       "phone": phone,
-      "status": "주문 완료",
+      "address": address,
+      "status": "주문 완료 (배송 대기)",
   }
   orders.append(new_order)
   return (
@@ -530,7 +568,12 @@ def get_orders():
   name = request.args.get("name", "").strip()
   if not name:
     return jsonify([])
-  matched = [o for o in orders if o["name"] == name]
+  # 이름 또는 고유 주문 번호로 조회 가능하도록 필터링
+  matched = [
+      o
+      for o in orders
+      if name in o["name"] or name.upper() in o["order_code"]
+  ]
   return jsonify(matched)
 
 
@@ -599,7 +642,6 @@ def admin_update_product(p_id):
   return jsonify({"message": "상품 정보가 수정되었습니다."}), 200
 
 
-# 관리자 전용: 상품 삭제 API (DELETE)
 @app.route("/api/admin/product/<int:p_id>", methods=["DELETE"])
 def admin_delete_product(p_id):
   if not session.get("logged_in"):
