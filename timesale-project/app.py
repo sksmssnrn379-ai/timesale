@@ -13,7 +13,7 @@ import re
 app = Flask(__name__)
 app.secret_key = "timesale_secret_key_security_123"
 
-# 메모리 기반 데이터베이스 (상품별 개별 open_time 설정)
+# 메모리 기반 데이터베이스
 products = {
     1: {
         "id": 1,
@@ -52,7 +52,7 @@ USER_TEMPLATE = """
             <p class="text-gray-500 text-sm mt-1">상품별 오픈 시간이 다른 한정판 선착순 구매 서비스</p>
         </div>
 
-        <!-- 기능 1: 상품 및 잔여 재고 조회 (개별 타이머 포함) -->
+        <!-- 기능 1: 상품 및 잔여 재고 조회 -->
         <div class="mb-6 p-5 border border-gray-100 rounded-xl bg-gray-50/50">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-base font-bold text-gray-800">📌 1. 타임딜 상품 및 잔여 재고</h2>
@@ -148,7 +148,7 @@ USER_TEMPLATE = """
                 }
             }
 
-            document.getElementById('product-list').innerHTML = html;
+            document.getElementById('product-list').innerHTML = html || '<p class="text-gray-400 text-xs text-center py-4">등록된 상품이 없습니다.</p>';
             document.getElementById('purchase-product-id').innerHTML = selectHtml || '<option value="">구매 가능한 상품이 없습니다</option>';
             checkSelectedProduct();
         }
@@ -230,7 +230,7 @@ USER_TEMPLATE = """
 
         window.onload = () => {
             loadProducts();
-            setInterval(loadProducts, 1000); // 1초마다 타이머 및 상태 갱신
+            setInterval(loadProducts, 1000);
         };
     </script>
 </body>
@@ -272,7 +272,7 @@ LOGIN_TEMPLATE = """
 </html>
 """
 
-# ==================== 3. 관리자 대시보드 페이지 (상품별 오픈 시간 입력 포함) ====================
+# ==================== 3. 관리자 대시보드 페이지 (삭제 버튼 추가) ====================
 ADMIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -303,10 +303,10 @@ ADMIN_TEMPLATE = """
             </div>
         </div>
 
-        <!-- 상품 등록/수정 섹션 (개별 오픈 시간 포함) -->
+        <!-- 상품 등록/수정 섹션 -->
         <div class="mb-8 p-6 bg-indigo-50/50 border border-indigo-100 rounded-2xl shadow-2xs">
             <h2 class="text-base font-bold text-indigo-900 mb-3 flex items-center">
-                <span class="mr-2">📦</span> 타임딜 상품 등록 및 수정 (개별 오픈 시간 지정)
+                <span class="mr-2">📦</span> 타임딜 상품 등록 및 수정
             </h2>
             <form id="product-form" onsubmit="saveProduct(event)" class="space-y-3">
                 <input type="hidden" id="p-id" value="">
@@ -365,10 +365,13 @@ ADMIN_TEMPLATE = """
                         <span class="font-bold text-gray-800 text-sm">${p.name}</span>
                         <div class="text-gray-400 mt-0.5">${p.price.toLocaleString()}원 | 재고: ${p.stock}개 | 오픈: ${p.open_time.replace('T', ' ')}</div>
                     </div>
-                    <button onclick="editProduct(${p.id}, '${p.name}', ${p.price}, ${p.stock}, '${p.open_time}')" class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-indigo-100 transition">수정</button>
+                    <div class="space-x-1">
+                        <button onclick="editProduct(${p.id}, '${p.name}', ${p.price}, ${p.stock}, '${p.open_time}')" class="bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-indigo-100 transition">수정</button>
+                        <button onclick="deleteProduct(${p.id})" class="bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-red-100 transition">삭제</button>
+                    </div>
                 </div>`;
             }
-            document.getElementById('admin-product-list').innerHTML = prodHtml;
+            document.getElementById('admin-product-list').innerHTML = prodHtml || '<p class="text-gray-400 text-xs text-center py-4">등록된 상품이 없습니다.</p>';
 
             const resOrd = await fetch('/api/admin/orders');
             const orders = await resOrd.json();
@@ -419,6 +422,21 @@ ADMIN_TEMPLATE = """
             }
         }
 
+        async function deleteProduct(id) {
+            if (!confirm("정말 이 상품을 삭제하시겠습니까?")) return;
+
+            const res = await fetch(`/api/admin/product/${id}`, {
+                method: 'DELETE'
+            });
+            const result = await res.json();
+            if (res.ok) {
+                alert(result.message);
+                loadAdminData();
+            } else {
+                alert("삭제 실패: " + result.error);
+            }
+        }
+
         function editProduct(id, name, price, stock, open_time) {
             document.getElementById('p-id').value = id;
             document.getElementById('p-name').value = name;
@@ -438,7 +456,7 @@ ADMIN_TEMPLATE = """
 </html>
 """
 
-# ==================== 4. 플라스크 라우트 및 백엔드 개별 오픈 시간 검증 로직 ====================
+# ==================== 4. 플라스크 라우트 및 백엔드 로직 ====================
 
 
 @app.route("/")
@@ -463,7 +481,6 @@ def purchase():
 
   product = products[p_id]
 
-  # 백엔드 서버 시간 기준 '해당 상품의 개별 오픈 시간' 검증
   try:
     open_dt = datetime.fromisoformat(product["open_time"])
     now_dt = datetime.now()
@@ -580,6 +597,18 @@ def admin_update_product(p_id):
   products[p_id]["stock"] = data.get("stock", products[p_id]["stock"])
   products[p_id]["open_time"] = data.get("open_time", products[p_id]["open_time"])
   return jsonify({"message": "상품 정보가 수정되었습니다."}), 200
+
+
+# 관리자 전용: 상품 삭제 API (DELETE)
+@app.route("/api/admin/product/<int:p_id>", methods=["DELETE"])
+def admin_delete_product(p_id):
+  if not session.get("logged_in"):
+    return jsonify({"error": "권한이 없습니다."}), 401
+  if p_id not in products:
+    return jsonify({"error": "존재하지 않는 상품입니다."}), 404
+
+  del products[p_id]
+  return jsonify({"message": "상품이 성공적으로 삭제되었습니다."}), 200
 
 
 @app.route("/api/admin/orders", methods=["GET"])
