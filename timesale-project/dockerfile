@@ -1,0 +1,25 @@
+
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# CA 인증서 설치
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    openssl && \
+    update-ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# 인증서 경로 지정
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
+# Flask 설치
+RUN python -m pip install --no-cache-dir flask
+
+COPY . /app
+
+EXPOSE 5000
+
+CMD ["python", "app.py"]
