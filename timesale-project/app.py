@@ -22,6 +22,7 @@ orders = []
 ADMIN_ID = "admin"
 ADMIN_PW = "1234"
 
+# ==================== 1. 사용자용 메인 페이지 ====================
 USER_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -58,7 +59,7 @@ USER_TEMPLATE = """
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">구매자 이름</label>
-                        <input type="text" id="buyer-name" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="홍길동 (완성형 한글 2글자 이상)">
+                        <input type="text" id="buyer-name" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="홍길동 (한글 2글자 이상)">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">연락처 (- 없이 숫자만)</label>
@@ -82,6 +83,7 @@ USER_TEMPLATE = """
 
     </div>
 
+    <!-- 숨겨진 관리자 진입점 (푸터 구석의 아주 작은 마침표) -->
     <footer class="text-center mt-6 text-xs text-gray-400">
         &copy; 2026 Timesale Service. All rights reserved. 
         <a href="/admin/login" class="text-gray-300 hover:text-gray-600 ml-1 transition" title="관리자">.</a>
@@ -116,14 +118,13 @@ USER_TEMPLATE = """
             const name = document.getElementById('buyer-name').value.trim();
             const phone = document.getElementById('buyer-phone').value.trim();
 
-            // 완성된 한글 2글자 이상 검증 정규식 (자음만 입력되는 것 방지)
             const nameRegex = /^[가-힣]{2,}$/;
             const phoneRegex = /^010\d{7,8}$/;
             const resultDiv = document.getElementById('purchase-result');
 
             if (!nameRegex.test(name)) {
                 resultDiv.className = "mt-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-semibold";
-                resultDiv.innerText = "❌ 입력 오류: 이름은 완성된 한글 2글자 이상 입력해주세요. (자음만 입력 불가)";
+                resultDiv.innerText = "❌ 입력 오류: 이름은 완성된 한글 2글자 이상 입력해주세요.";
                 return;
             }
 
@@ -178,6 +179,7 @@ USER_TEMPLATE = """
 </html>
 """
 
+# ==================== 2. 관리자 로그인 페이지 ====================
 LOGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -212,6 +214,7 @@ LOGIN_TEMPLATE = """
 </html>
 """
 
+# ==================== 3. 관리자 대시보드 페이지 (개선된 디자인 적용) ====================
 ADMIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -221,11 +224,21 @@ ADMIN_TEMPLATE = """
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 p-6">
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-indigo-100">
+        
+        <!-- 대시보드 헤더 (시각적 구분 강화) -->
         <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
-            <div>
-                <h1 class="text-2xl font-extrabold text-gray-900">🛠️ 관리자 대시보드</h1>
-                <p class="text-gray-500 text-xs mt-1">타임딜 상품 관리 및 전체 주문 내역 조회</p>
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-extrabold text-gray-900">관리자 대시보드</h1>
+                    <p class="text-indigo-600 text-xs font-semibold mt-0.5">ADMINISTRATION CONTROL PANEL</p>
+                </div>
             </div>
             <div class="space-x-2">
                 <a href="/" class="bg-gray-100 text-gray-700 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 transition">사용자 홈</a>
@@ -233,39 +246,47 @@ ADMIN_TEMPLATE = """
             </div>
         </div>
 
-        <div class="mb-8 p-5 bg-indigo-50/40 border border-indigo-100 rounded-xl">
-            <h2 class="text-base font-bold text-indigo-900 mb-3">📦 타임딜 상품 등록 및 수정</h2>
+        <!-- 상품 등록/수정 섹션 (인디고 포인트 디자인) -->
+        <div class="mb-8 p-6 bg-indigo-50/50 border border-indigo-100 rounded-2xl shadow-2xs">
+            <h2 class="text-base font-bold text-indigo-900 mb-3 flex items-center">
+                <span class="mr-2">📦</span> 타임딜 상품 등록 및 수정
+            </h2>
             <form id="product-form" onsubmit="saveProduct(event)" class="space-y-3">
                 <input type="hidden" id="p-id" value="">
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">상품명</label>
-                    <input type="text" id="p-name" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm">
+                    <input type="text" id="p-name" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">가격 (원)</label>
-                        <input type="number" id="p-price" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm">
+                        <input type="number" id="p-price" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">재고 수량</label>
-                        <input type="number" id="p-stock" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm">
+                        <input type="number" id="p-stock" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     </div>
                 </div>
-                <div class="flex space-x-2">
-                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700 transition">상품 저장/등록</button>
-                    <button type="button" onclick="resetProductForm()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-gray-300 transition">입력 초기화</button>
+                <div class="flex space-x-2 pt-1">
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-indigo-700 transition shadow-xs">상품 저장/등록</button>
+                    <button type="button" onclick="resetProductForm()" class="bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-gray-50 transition">입력 초기화</button>
                 </div>
             </form>
             <div id="product-msg" class="mt-2 text-xs font-semibold"></div>
         </div>
 
+        <!-- 상품 현황 및 주문 목록 카드 그리드 -->
         <div class="grid grid-cols-2 gap-6">
-            <div class="p-5 border border-gray-100 rounded-xl bg-gray-50/50">
-                <h2 class="text-sm font-bold text-gray-800 mb-3">📋 등록된 상품 현황</h2>
+            <div class="p-5 border border-gray-100 rounded-2xl bg-gray-50/50 shadow-2xs">
+                <h2 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
+                    <span class="mr-2">📋</span> 등록된 상품 현황
+                </h2>
                 <div id="admin-product-list" class="space-y-2"></div>
             </div>
-            <div class="p-5 border border-gray-100 rounded-xl bg-gray-50/50">
-                <h2 class="text-sm font-bold text-gray-800 mb-3">📑 전체 주문자 목록</h2>
+            <div class="p-5 border border-gray-100 rounded-2xl bg-gray-50/50 shadow-2xs">
+                <h2 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
+                    <span class="mr-2">📑</span> 전체 주문자 목록
+                </h2>
                 <div id="admin-order-list" class="space-y-2"></div>
             </div>
         </div>
@@ -278,12 +299,12 @@ ADMIN_TEMPLATE = """
             let prodHtml = '';
             for (let id in products) {
                 let p = products[id];
-                prodHtml += `<div class="p-3 bg-white border border-gray-100 rounded-lg flex justify-between items-center text-xs shadow-2xs">
+                prodHtml += `<div class="p-3 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs shadow-2xs">
                     <div>
-                        <span class="font-bold text-gray-800">${p.name}</span>
-                        <div class="text-gray-400 mt-0.5">${p.price.toLocaleString()}원 / 재고: ${p.stock}개</div>
+                        <span class="font-bold text-gray-800 text-sm">${p.name}</span>
+                        <div class="text-gray-400 mt-0.5">${p.price.toLocaleString()}원 | 잔여재고: <span class="text-indigo-600 font-semibold">${p.stock}개</span></div>
                     </div>
-                    <button onclick="editProduct(${p.id}, '${p.name}', ${p.price}, ${p.stock})" class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded font-semibold hover:bg-amber-200 transition">수정</button>
+                    <button onclick="editProduct(${p.id}, '${p.name}', ${p.price}, ${p.stock})" class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-indigo-100 transition">수정</button>
                 </div>`;
             }
             document.getElementById('admin-product-list').innerHTML = prodHtml;
@@ -292,12 +313,16 @@ ADMIN_TEMPLATE = """
             const orders = await resOrd.json();
             let ordHtml = '';
             if (orders.length === 0) {
-                ordHtml = '<p class="text-gray-400 text-xs py-2 text-center">접수된 주문이 없습니다.</p>';
+                ordHtml = '<p class="text-gray-400 text-xs py-4 text-center">접수된 주문이 없습니다.</p>';
             } else {
                 orders.forEach(o => {
-                    ordHtml += `<div class="p-3 bg-white border border-gray-100 rounded-lg text-xs shadow-2xs">
-                        <span class="font-bold text-indigo-600">#${o.order_id}</span> ${o.product_name}
-                        <div class="text-gray-500 mt-0.5">${o.name} (${o.phone})</div>
+                    ordHtml += `<div class="p-3 bg-white border border-gray-100 rounded-xl text-xs shadow-2xs">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-indigo-600">주문 #${o.order_id}</span>
+                            <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded font-semibold">${o.status}</span>
+                        </div>
+                        <div class="text-gray-800 font-medium mt-1">${o.product_name}</div>
+                        <div class="text-gray-400 mt-0.5">구매자: ${o.name} (${o.phone})</div>
                     </div>`;
                 });
             }
@@ -350,6 +375,8 @@ ADMIN_TEMPLATE = """
 </html>
 """
 
+# ==================== 4. 플라스크 라우트 및 세션 보호 로직 ====================
+
 
 @app.route("/")
 def index():
@@ -368,11 +395,10 @@ def purchase():
   name = data.get("name", "").strip()
   phone = data.get("phone", "").strip()
 
-  # 백엔드 이름 유효성 검사 (완성된 한글 2글자 이상)
   name_pattern = r"^[가-힣]{2,}$"
   if not re.match(name_pattern, name):
     return jsonify(
-        {"error": "이름은 완성된 한글 2글자 이상 입력해주세요. (자음만 입력 불가)"}
+        {"error": "이름은 완성된 한글 2글자 이상 입력해주세요."}
     ), 400
 
   phone_pattern = r"^010\d{7,8}$"
