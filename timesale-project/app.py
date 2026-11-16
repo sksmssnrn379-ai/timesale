@@ -36,7 +36,7 @@ orders = []
 ADMIN_ID = "admin"
 ADMIN_PW = "1234"
 
-# ==================== 1. 사용자용 메인 페이지 (주문 코드로만 조회하도록 변경) ====================
+# ==================== 1. 사용자용 메인 페이지 ====================
 USER_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -89,7 +89,7 @@ USER_TEMPLATE = """
             <div id="purchase-result" class="mt-3 text-sm"></div>
         </div>
 
-        <!-- 기능 3: 주문 접수 내역 조회 (주문 코드로만 조회) -->
+        <!-- 기능 3: 주문 접수 내역 조회 -->
         <div class="p-5 border border-gray-100 rounded-xl bg-gray-50/50">
             <h2 class="text-base font-bold text-gray-800 mb-3">📌 3. 내 주문 접수 내역 조회</h2>
             <div class="flex space-x-2 mb-3">
@@ -159,7 +159,7 @@ USER_TEMPLATE = """
             document.getElementById('product-list').innerHTML = html || '<p class="text-gray-400 text-xs text-center py-4">등록된 상품이 없습니다.</p>';
             selectEl.innerHTML = selectHtml || '<option value="">구매 가능한 상품이 없습니다</option>';
             
-            if (currentSelected) {
+            if (currentSelected && selectEl.querySelector(`option[value="${currentSelected}"]`)) {
                 selectEl.value = currentSelected;
             }
             checkSelectedProduct();
@@ -222,10 +222,11 @@ USER_TEMPLATE = """
                     <div>주문 코드: <span class="font-mono bg-white px-2 py-0.5 rounded border border-green-200 text-indigo-600 font-bold">${result.order.order_code}</span></div>
                     <div>${result.message} (주문 코드로 내역 조회가 가능합니다.)</div>
                 `;
-                loadProducts();
+                await loadProducts();
             } else {
                 resultDiv.className = "mt-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-semibold";
                 resultDiv.innerText = "❌ 실패/경계: " + result.error;
+                await loadProducts();
             }
         }
 
@@ -297,7 +298,7 @@ LOGIN_TEMPLATE = """
 </html>
 """
 
-# ==================== 3. 관리자 대시보드 페이지 ====================
+# ==================== 3. 관리자 대시보드 페이지 (수정/삭제 버튼 레이아웃 정돈) ====================
 ADMIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -367,13 +368,13 @@ ADMIN_TEMPLATE = """
                 <h2 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
                     <span class="mr-2">📋</span> 등록된 상품 현황
                 </h2>
-                <div id="admin-product-list" class="space-y-2"></div>
+                <div id="admin-product-list" class="space-y-3"></div>
             </div>
             <div class="p-5 border border-gray-100 rounded-2xl bg-gray-50/50 shadow-2xs">
                 <h2 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
                     <span class="mr-2">📑</span> 전체 주문자 목록
                 </h2>
-                <div id="admin-order-list" class="space-y-2"></div>
+                <div id="admin-order-list" class="space-y-3"></div>
             </div>
         </div>
     </div>
@@ -385,14 +386,16 @@ ADMIN_TEMPLATE = """
             let prodHtml = '';
             for (let id in products) {
                 let p = products[id];
-                prodHtml += `<div class="p-3 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs shadow-2xs">
-                    <div>
+                // 수정/삭제 버튼 영역 레이아웃 정돈 (flex 간격 및 크기 통일)
+                prodHtml += `<div class="p-3.5 bg-white border border-gray-100 rounded-xl flex justify-between items-center text-xs shadow-2xs">
+                    <div class="space-y-0.5">
                         <span class="font-bold text-gray-800 text-sm">${p.name}</span>
-                        <div class="text-gray-400 mt-0.5">${p.price.toLocaleString()}원 | 재고: ${p.stock}개 | 오픈: ${p.open_time.replace('T', ' ')}</div>
+                        <div class="text-gray-500">가격: ${p.price.toLocaleString()}원 | 재고: <span class="text-indigo-600 font-bold">${p.stock}개</span></div>
+                        <div class="text-gray-400">오픈: ${p.open_time.replace('T', ' ')}</div>
                     </div>
-                    <div class="space-x-1">
-                        <button onclick="editProduct(${p.id}, '${p.name}', ${p.price}, ${p.stock}, '${p.open_time}')" class="bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-indigo-100 transition">수정</button>
-                        <button onclick="deleteProduct(${p.id})" class="bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-red-100 transition">삭제</button>
+                    <div class="flex items-center space-x-1.5 shrink-0">
+                        <button onclick="editProduct(${p.id}, '${p.name}', ${p.price}, ${p.stock}, '${p.open_time}')" class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-indigo-100 transition">수정</button>
+                        <button onclick="deleteProduct(${p.id})" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-red-100 transition">삭제</button>
                     </div>
                 </div>`;
             }
@@ -402,10 +405,10 @@ ADMIN_TEMPLATE = """
             const orders = await resOrd.json();
             let ordHtml = '';
             if (orders.length === 0) {
-                ordHtml = '<p class="text-gray-400 text-xs py-4 text-center">접수된 주문이 없습니다.</p>';
+                ordHtml = '<p class="text-gray-400 text-xs text-center py-4">접수된 주문이 없습니다.</p>';
             } else {
                 orders.forEach(o => {
-                    ordHtml += `<div class="p-3 bg-white border border-gray-100 rounded-xl text-xs shadow-2xs space-y-1">
+                    ordHtml += `<div class="p-3.5 bg-white border border-gray-100 rounded-xl text-xs shadow-2xs space-y-1">
                         <div class="flex justify-between items-center">
                             <span class="font-bold font-mono text-indigo-600">${o.order_code}</span>
                             <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded font-semibold">${o.status}</span>
@@ -538,7 +541,6 @@ def purchase():
 
   product["stock"] -= 1
 
-  # 고유 주문 번호 생성
   date_str = datetime.now().strftime("%Y%m%d")
   rand_str = "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ0123456789", k=4))
   order_code = f"ORD-{date_str}-{rand_str}"
@@ -565,7 +567,6 @@ def purchase():
 
 @app.route("/api/orders", methods=["GET"])
 def get_orders():
-  # 주문 코드로만 검색 가능하도록 변경
   code = request.args.get("code", "").strip().upper()
   if not code:
     return jsonify([])
