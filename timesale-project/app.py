@@ -36,7 +36,7 @@ orders = []
 ADMIN_ID = "admin"
 ADMIN_PW = "1234"
 
-# ==================== 1. 사용자용 메인 페이지 (주소 입력 및 주문번호 안내 추가) ====================
+# ==================== 1. 사용자용 메인 페이지 (주문 코드로만 조회하도록 변경) ====================
 USER_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -62,7 +62,7 @@ USER_TEMPLATE = """
             <div id="product-list" class="space-y-3"></div>
         </div>
 
-        <!-- 기능 2: 선착순 굿즈 구매 신청 (주소 입력 포함) -->
+        <!-- 기능 2: 선착순 굿즈 구매 신청 -->
         <div class="mb-6 p-5 border border-gray-100 rounded-xl bg-gray-50/50">
             <h2 class="text-base font-bold text-gray-800 mb-3">📌 2. 선착순 굿즈 구매 신청</h2>
             <form onsubmit="submitPurchase(event)" class="space-y-3">
@@ -89,11 +89,11 @@ USER_TEMPLATE = """
             <div id="purchase-result" class="mt-3 text-sm"></div>
         </div>
 
-        <!-- 기능 3: 주문 접수 내역 조회 -->
+        <!-- 기능 3: 주문 접수 내역 조회 (주문 코드로만 조회) -->
         <div class="p-5 border border-gray-100 rounded-xl bg-gray-50/50">
             <h2 class="text-base font-bold text-gray-800 mb-3">📌 3. 내 주문 접수 내역 조회</h2>
             <div class="flex space-x-2 mb-3">
-                <input type="text" id="search-name" placeholder="주문자 이름 입력" class="p-2.5 bg-white border border-gray-200 rounded-lg flex-1 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="text" id="search-code" placeholder="주문 코드 입력 (예: ORD-20261116-XXXX)" class="p-2.5 bg-white border border-gray-200 rounded-lg flex-1 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <button onclick="searchOrders()" class="bg-gray-800 text-white px-4 py-2.5 rounded-lg hover:bg-gray-900 transition text-sm font-semibold">조회하기</button>
             </div>
             <div id="order-result" class="space-y-2"></div>
@@ -219,8 +219,8 @@ USER_TEMPLATE = """
                 resultDiv.className = "mt-3 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl text-xs font-semibold space-y-1";
                 resultDiv.innerHTML = `
                     <div class="font-bold text-sm text-green-900">🎉 선착순 구매 성공!</div>
-                    <div>주문 번호: <span class="font-mono bg-white px-2 py-0.5 rounded border border-green-200 text-indigo-600">${result.order.order_code}</span></div>
-                    <div>${result.message}</div>
+                    <div>주문 코드: <span class="font-mono bg-white px-2 py-0.5 rounded border border-green-200 text-indigo-600 font-bold">${result.order.order_code}</span></div>
+                    <div>${result.message} (주문 코드로 내역 조회가 가능합니다.)</div>
                 `;
                 loadProducts();
             } else {
@@ -230,12 +230,12 @@ USER_TEMPLATE = """
         }
 
         async function searchOrders() {
-            const name = document.getElementById('search-name').value.trim();
-            const res = await fetch(`/api/orders?name=${encodeURIComponent(name)}`);
+            const code = document.getElementById('search-code').value.trim();
+            const res = await fetch(`/api/orders?code=${encodeURIComponent(code)}`);
             const data = await res.json();
             let resultDiv = document.getElementById('order-result');
             if (data.length === 0) {
-                resultDiv.innerHTML = '<p class="text-gray-400 text-xs py-2 text-center">조회된 주문 내역이 없습니다.</p>';
+                resultDiv.innerHTML = '<p class="text-gray-400 text-xs py-2 text-center">일치하는 주문 코드가 없습니다.</p>';
                 return;
             }
             let html = '';
@@ -538,7 +538,7 @@ def purchase():
 
   product["stock"] -= 1
 
-  # 고유 주문 번호 생성 (예: ORD-20261116-A1B2)
+  # 고유 주문 번호 생성
   date_str = datetime.now().strftime("%Y%m%d")
   rand_str = "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ0123456789", k=4))
   order_code = f"ORD-{date_str}-{rand_str}"
@@ -565,15 +565,11 @@ def purchase():
 
 @app.route("/api/orders", methods=["GET"])
 def get_orders():
-  name = request.args.get("name", "").strip()
-  if not name:
+  # 주문 코드로만 검색 가능하도록 변경
+  code = request.args.get("code", "").strip().upper()
+  if not code:
     return jsonify([])
-  # 이름 또는 고유 주문 번호로 조회 가능하도록 필터링
-  matched = [
-      o
-      for o in orders
-      if name in o["name"] or name.upper() in o["order_code"]
-  ]
+  matched = [o for o in orders if code in o["order_code"]]
   return jsonify(matched)
 
 
